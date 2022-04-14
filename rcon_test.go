@@ -196,7 +196,7 @@ func TestConn_Execute(t *testing.T) {
 	})
 
 	t.Run("read deadline", func(t *testing.T) {
-		server := rcontest.NewServer(rcontest.SetSettings(rcontest.Settings{Password: "password", CommandResponseDelay: 2 * time.Second}))
+		server := rcontest.NewServer(rcontest.SetSettings(rcontest.Settings{Password: "password", CommandResponseDelay: 22 * time.Second}))
 		defer server.Close()
 
 		conn, err := rcon.Dial(server.Addr(), "password", rcon.SetDeadline(1*time.Second))
@@ -222,7 +222,6 @@ func TestConn_Execute(t *testing.T) {
 			t.Fatalf("got err %q, want %v", err, nil)
 		}
 		defer conn.Close()
-
 		result, err := conn.Execute("padding")
 		if !errors.Is(err, rcon.ErrInvalidPacketPadding) {
 			t.Errorf("got err %q, want %q", err, rcon.ErrInvalidPacketPadding)
@@ -241,8 +240,8 @@ func TestConn_Execute(t *testing.T) {
 		defer conn.Close()
 
 		result, err := conn.Execute("another")
-		if !errors.Is(err, rcon.ErrInvalidPacketID) {
-			t.Errorf("got err %q, want %q", err, rcon.ErrInvalidPacketID)
+		if !errors.Is(err, rcon.ErrExecuteTimeout) {
+			t.Errorf("got err %q, want %q", err, rcon.ErrExecuteTimeout)
 		}
 
 		if len(result) != 0 {

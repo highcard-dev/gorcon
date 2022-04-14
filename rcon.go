@@ -85,6 +85,10 @@ var (
 	// ErrMultiErrorOccurred is returned when close connection failed with
 	// error after auth failed.
 	ErrMultiErrorOccurred = errors.New("an error occurred while handling another error")
+
+	// ErrExecuteTimeout is returned when Execute fn times out
+	// error after Execute times out
+	ErrExecuteTimeout = errors.New("excecute timeout")
 )
 
 // Conn is source RCON generic stream-oriented network connection.
@@ -143,19 +147,20 @@ func (c *Conn) Execute(command string) (string, error) {
 	}
 
 	var response *Packet
+	var err error
 loop:
 	for timeout := time.After(c.settings.executeTimeout); ; {
 		select {
 		case <-timeout:
-			break loop
+			return "", ErrExecuteTimeout
 		default:
 			if response != nil && response.ID == randId {
 				break loop
 			}
-			response, _ = c.read()
+			response, err = c.read()
 		}
 	}
-	return response.Body(), nil
+	return response.Body(), err
 }
 
 // LocalAddr returns the local network address.
