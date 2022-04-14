@@ -12,7 +12,7 @@ type Settings struct {
 // DefaultSettings provides default deadline settings to Conn.
 var DefaultSettings = Settings{
 	dialTimeout:    DefaultDialTimeout,
-	executeTimeout: DefaultDialTimeout,
+	executeTimeout: DefaultExecuteTimeout,
 	deadline:       DefaultDeadline,
 }
 

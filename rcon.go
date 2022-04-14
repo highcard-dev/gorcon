@@ -15,6 +15,9 @@ const (
 	// DefaultDialTimeout provides default auth timeout to remote server.
 	DefaultDialTimeout = 5 * time.Second
 
+	// DefaultExecuteTimeout provides default timeout of the execute function to remote server.
+	DefaultExecuteTimeout = 5 * time.Second
+
 	// DefaultDeadline provides default deadline to tcp read/write operations.
 	DefaultDeadline = 5 * time.Second
 
