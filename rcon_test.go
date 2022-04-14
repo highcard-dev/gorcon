@@ -206,7 +206,8 @@ func TestConn_Execute(t *testing.T) {
 		defer conn.Close()
 
 		result, err := conn.Execute("deadline")
-		wantErrMsg := fmt.Sprintf("rcon: read packet size: read tcp %s->%s: i/o timeout", conn.LocalAddr(), conn.RemoteAddr())
+		//wantErrMsg := fmt.Sprintf("rcon: read packet size: read tcp %s->%s: i/o timeout", conn.LocalAddr(), conn.RemoteAddr())
+		wantErrMsg := fmt.Sprintf("excecute timeout"), conn.RemoteAddr())
 		if err == nil || err.Error() != wantErrMsg {
 			t.Errorf("got err %q, want to contain %q", err, wantErrMsg)
 		}
