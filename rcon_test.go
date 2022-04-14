@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/highcard-dev/gorcon"
+	"github.com/gorcon/rcon"
 	"github.com/highcard-dev/gorcon/rcontest"
 )
 
@@ -48,11 +48,6 @@ func commandHandler(c *rcontest.Context) {
 	case "help":
 		responseBody := "lorem ipsum dolor sit amet"
 		rcon.NewPacket(rcon.SERVERDATA_RESPONSE_VALUE, c.Request().ID, responseBody).WriteTo(c.Conn())
-	case "rust":
-		// Write specific Rust package.
-		rcon.NewPacket(4, c.Request().ID, "").WriteTo(c.Conn())
-
-		rcon.NewPacket(rcon.SERVERDATA_RESPONSE_VALUE, -1, c.Request().Body()).WriteTo(c.Conn())
 	case "padding":
 		writeWithInvalidPadding(c.Conn(), rcon.NewPacket(rcon.SERVERDATA_RESPONSE_VALUE, c.Request().ID, ""))
 	case "another":
@@ -268,24 +263,6 @@ func TestConn_Execute(t *testing.T) {
 		}
 
 		resultWant := "lorem ipsum dolor sit amet"
-		if result != resultWant {
-			t.Fatalf("got result %q, want %q", result, resultWant)
-		}
-	})
-
-	t.Run("rust workaround", func(t *testing.T) {
-		conn, err := rcon.Dial(server.Addr(), "password", rcon.SetDeadline(1*time.Second))
-		if err != nil {
-			t.Fatalf("got err %q, want %v", err, nil)
-		}
-		defer conn.Close()
-
-		result, err := conn.Execute("rust")
-		if err != nil {
-			t.Fatalf("got err %q, want %v", err, nil)
-		}
-
-		resultWant := "rust"
 		if result != resultWant {
 			t.Fatalf("got result %q, want %q", result, resultWant)
 		}
