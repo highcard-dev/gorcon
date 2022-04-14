@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"time"
 )
@@ -47,10 +48,6 @@ const (
 	// SERVERDATA_EXECCOMMAND packet type represents a command issued to the server
 	// by a client. The response will vary depending on the command issued.
 	SERVERDATA_EXECCOMMAND int32 = 2
-
-	// SERVERDATA_EXECCOMMAND_ID is any positive integer, chosen by the client
-	// (will be mirrored back in the server's response).
-	SERVERDATA_EXECCOMMAND_ID int32 = 0
 )
 
 var (
@@ -127,6 +124,9 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 // and compiling its payload bytes in the appropriate order. The response body
 // is decompiled from bytes into a string for return.
 func (c *Conn) Execute(command string) (string, error) {
+
+	randId := int32(rand.Int())
+
 	if command == "" {
 		return "", ErrCommandEmpty
 	}
@@ -135,19 +135,23 @@ func (c *Conn) Execute(command string) (string, error) {
 		return "", ErrCommandTooLong
 	}
 
-	if err := c.write(SERVERDATA_EXECCOMMAND, SERVERDATA_EXECCOMMAND_ID, command); err != nil {
+	if err := c.write(SERVERDATA_EXECCOMMAND, randId, command); err != nil {
 		return "", err
 	}
 
-	response, err := c.read()
-	if err != nil {
-		return response.Body(), err
+	var response *Packet
+loop:
+	for timeout := time.After(c.settings.executeTimeout); ; {
+		select {
+		case <-timeout:
+			break loop
+		default:
+			if response != nil && response.ID == randId {
+				break loop
+			}
+			response, _ = c.read()
+		}
 	}
-
-	if response.ID != SERVERDATA_EXECCOMMAND_ID {
-		return response.Body(), ErrInvalidPacketID
-	}
-
 	return response.Body(), nil
 }
 
@@ -244,24 +248,6 @@ func (c *Conn) read() (*Packet, error) {
 	packet := &Packet{}
 	if _, err := packet.ReadFrom(c.conn); err != nil {
 		return packet, err
-	}
-
-	// Workaround for Rust server.
-	// Rust rcon server responses packet with a type of 4 and the next packet
-	// is valid. It is undocumented, so skip packet and read next.
-	if packet.Type == 4 {
-		if _, err := packet.ReadFrom(c.conn); err != nil {
-			return packet, err
-		}
-
-		// One more workaround for Rust server.
-		// When sent command "Say" there is no response data from server with
-		// packet.ID = SERVERDATA_EXECCOMMAND_ID, only previous console message
-		// that command was received with packet.ID = -1, therefore, forcibly
-		// set packet.ID to SERVERDATA_EXECCOMMAND_ID.
-		if packet.ID == -1 {
-			packet.ID = SERVERDATA_EXECCOMMAND_ID
-		}
 	}
 
 	return packet, nil

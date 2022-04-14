@@ -4,14 +4,16 @@ import "time"
 
 // Settings contains option to Conn.
 type Settings struct {
-	dialTimeout time.Duration
-	deadline    time.Duration
+	dialTimeout    time.Duration
+	deadline       time.Duration
+	executeTimeout time.Duration
 }
 
 // DefaultSettings provides default deadline settings to Conn.
 var DefaultSettings = Settings{
-	dialTimeout: DefaultDialTimeout,
-	deadline:    DefaultDeadline,
+	dialTimeout:    DefaultDialTimeout,
+	executeTimeout: DefaultDialTimeout,
+	deadline:       DefaultDeadline,
 }
 
 // Option allows to inject settings to Settings.
