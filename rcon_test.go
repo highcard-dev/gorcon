@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorcon/rcon"
+	rcon "github.com/highcard-dev/gorcon"
 	"github.com/highcard-dev/gorcon/rcontest"
 )
 

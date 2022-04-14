@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorcon/rcon"
+	rcon "github.com/highcard-dev/gorcon"
 )
 
 // Server is an RCON server listening on a system-chosen port on the
