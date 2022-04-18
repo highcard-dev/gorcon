@@ -223,14 +223,31 @@ func TestConn_Execute(t *testing.T) {
 			t.Fatalf("got err %q, want %v", err, nil)
 		}
 		defer conn.Close()
-		result, err := conn.Execute("padding")
-		if !errors.Is(err, rcon.ErrInvalidPacketPadding) {
-			t.Errorf("got err %q, want %q", err, rcon.ErrInvalidPacketPadding)
+		_, err = conn.Execute("padding")
+		if !errors.Is(err, rcon.ErrExecuteTimeout) {
+			t.Fatalf("got err %q, want %q", err, rcon.ErrInvalidPacketPadding)
 		}
 
-		if len(result) != 2 {
-			t.Fatalf("got result len %d, want %d", len(result), 2)
+	})
+
+	t.Run("Stream", func(t *testing.T) {
+		conn, err := rcon.Dial(server.Addr(), "password")
+		if err != nil {
+			t.Fatalf("got err %q, want %v", err, nil)
 		}
+		defer conn.Close()
+		conn.Execute("help")
+
+		p, err := conn.Read()
+		resultWant := "lorem ipsum dolor sit amet"
+
+		if err != nil {
+			t.Fatalf("got err %q, want %v", err, nil)
+		}
+		if p.Body() != resultWant {
+			t.Fatalf("got result %q, want %q", p.Body(), resultWant)
+		}
+
 	})
 
 	t.Run("invalid response id", func(t *testing.T) {

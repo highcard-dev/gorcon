@@ -3,6 +3,7 @@
 package rcon
 
 import (
+	"container/list"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -89,12 +90,18 @@ var (
 	// ErrExecuteTimeout is returned when Execute fn times out
 	// error after Execute times out
 	ErrExecuteTimeout = errors.New("excecute timeout")
+
+	// ErrConnectionNotOpen is retuned when connection not open
+	// error after connection is not open
+	ErrConnectionNotOpen = errors.New("connection not open")
 )
 
 // Conn is source RCON generic stream-oriented network connection.
 type Conn struct {
-	conn     net.Conn
-	settings Settings
+	conn         net.Conn
+	settings     Settings
+	openExecutes map[int32]chan *Packet
+	stream       *list.List
 }
 
 // Dial creates a new authorized Conn tcp dialer connection.
@@ -111,7 +118,7 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 		return nil, fmt.Errorf("rcon: %w", err)
 	}
 
-	client := Conn{conn: conn, settings: settings}
+	client := Conn{conn: conn, settings: settings, stream: list.New()}
 
 	if err := client.auth(password); err != nil {
 		// Failed to auth conn with the server.
@@ -122,6 +129,25 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 
 		return &client, fmt.Errorf("rcon: %w", err)
 	}
+
+	client.openExecutes = make(map[int32]chan *Packet)
+
+	//main reading routine
+	go func() {
+		for client.openExecutes != nil {
+			packet, err := client.read()
+			if err != nil {
+				break
+			}
+			client.stream.PushBack(packet)
+			for _, value := range client.openExecutes {
+				go func(v chan *Packet) {
+					v <- packet
+				}(value)
+			}
+
+		}
+	}()
 
 	return &client, nil
 }
@@ -141,8 +167,10 @@ func (c *Conn) Execute(command string) (string, error) {
 	if len(command) > MaxCommandLen {
 		return "", ErrCommandTooLong
 	}
+	c.openExecutes[int32(randId)] = make(chan *Packet)
 
 	if err := c.write(SERVERDATA_EXECCOMMAND, randId, command); err != nil {
+		delete(c.openExecutes, randId)
 		return "", err
 	}
 
@@ -152,13 +180,17 @@ loop:
 	for timeout := time.After(c.settings.executeTimeout); ; {
 		select {
 		case <-timeout:
-			return "", ErrExecuteTimeout
-		default:
+			err = ErrExecuteTimeout
+			break loop
+		case response = <-c.openExecutes[int32(randId)]:
 			if response != nil && response.ID == randId {
 				break loop
 			}
-			response, err = c.read()
 		}
+	}
+	delete(c.openExecutes, randId)
+	if response == nil {
+		return "", err
 	}
 	return response.Body(), err
 }
@@ -176,6 +208,17 @@ func (c *Conn) RemoteAddr() net.Addr {
 // Close closes the connection.
 func (c *Conn) Close() error {
 	return c.conn.Close()
+}
+
+// Get all rcon packet output as channel. Useful for console implementations, where you are not waiting for a specific package
+func (c *Conn) Read() (*Packet, error) {
+	if c.stream == nil {
+		return nil, errors.New("connection not open")
+	}
+	e := c.stream.Front()
+	c.stream.Remove(e)
+	p := e.Value.(*Packet)
+	return p, nil
 }
 
 // auth sends SERVERDATA_AUTH request to the remote server and
