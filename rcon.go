@@ -140,6 +140,9 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 				break
 			}
 			client.stream.PushBack(packet)
+			if client.stream.Len() > 100 {
+				client.stream.Remove(client.stream.Front())
+			}
 			for _, value := range client.openExecutes {
 				go func(v chan *Packet) {
 					v <- packet
