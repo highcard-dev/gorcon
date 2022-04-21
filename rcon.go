@@ -136,7 +136,7 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 		for client.openExecutes != nil {
 			packet, err := client.read()
 			if err != nil {
-				break
+				continue
 			}
 			if len(client.stream) >= 100 {
 				<-client.stream
@@ -178,11 +178,13 @@ func (c *Conn) Execute(command string) (string, error) {
 
 	var response *Packet
 	var err error
+	timeout := time.After(c.settings.executeTimeout)
 loop:
-	for timeout := time.After(c.settings.executeTimeout); ; {
+	for {
 		select {
 		case <-timeout:
 			err = ErrExecuteTimeout
+			response = nil
 			break loop
 		case response = <-c.openExecutes[int32(randId)]:
 			if response != nil && response.ID == randId {
