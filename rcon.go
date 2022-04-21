@@ -3,7 +3,6 @@
 package rcon
 
 import (
-	"container/list"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -101,7 +100,7 @@ type Conn struct {
 	conn         net.Conn
 	settings     Settings
 	openExecutes map[int32]chan *Packet
-	stream       *list.List
+	stream       chan *Packet
 }
 
 // Dial creates a new authorized Conn tcp dialer connection.
@@ -118,7 +117,7 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 		return nil, fmt.Errorf("rcon: %w", err)
 	}
 
-	client := Conn{conn: conn, settings: settings, stream: list.New()}
+	client := Conn{conn: conn, settings: settings, stream: make(chan *Packet, 100)}
 
 	if err := client.auth(password); err != nil {
 		// Failed to auth conn with the server.
@@ -139,10 +138,10 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 			if err != nil {
 				break
 			}
-			client.stream.PushBack(packet)
-			if client.stream.Len() > 100 {
-				client.stream.Remove(client.stream.Front())
+			if len(client.stream) >= 100 {
+				<-client.stream
 			}
+			client.stream <- packet
 			for _, value := range client.openExecutes {
 				go func(v chan *Packet) {
 					v <- packet
@@ -218,10 +217,7 @@ func (c *Conn) Read() (*Packet, error) {
 	if c.stream == nil {
 		return nil, errors.New("connection not open")
 	}
-	e := c.stream.Front()
-	c.stream.Remove(e)
-	p := e.Value.(*Packet)
-	return p, nil
+	return <-c.stream, nil
 }
 
 // auth sends SERVERDATA_AUTH request to the remote server and
