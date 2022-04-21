@@ -161,7 +161,7 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 // is decompiled from bytes into a string for return.
 func (c *Conn) Execute(command string) (string, error) {
 
-	if c.connected {
+	if !c.connected {
 		return "", errors.New("connection not open")
 	}
 
@@ -222,7 +222,7 @@ func (c *Conn) Close() error {
 
 // Get all rcon packet output as channel. Useful for console implementations, where you are not waiting for a specific package
 func (c *Conn) Read() (*Packet, error) {
-	if c.connected {
+	if !c.connected {
 		return nil, errors.New("connection not open")
 	}
 	return <-c.stream, nil
