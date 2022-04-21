@@ -101,6 +101,7 @@ type Conn struct {
 	settings     Settings
 	openExecutes map[int32]chan *Packet
 	stream       chan *Packet
+	connected    bool
 }
 
 // Dial creates a new authorized Conn tcp dialer connection.
@@ -130,7 +131,7 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 	}
 
 	client.openExecutes = make(map[int32]chan *Packet)
-
+	client.connected = true
 	//main reading routine
 	go func() {
 		for client.openExecutes != nil {
@@ -159,6 +160,10 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 // and compiling its payload bytes in the appropriate order. The response body
 // is decompiled from bytes into a string for return.
 func (c *Conn) Execute(command string) (string, error) {
+
+	if c.connected {
+		return "", errors.New("connection not open")
+	}
 
 	randId := int32(rand.Int())
 
@@ -211,12 +216,13 @@ func (c *Conn) RemoteAddr() net.Addr {
 
 // Close closes the connection.
 func (c *Conn) Close() error {
+	c.connected = false
 	return c.conn.Close()
 }
 
 // Get all rcon packet output as channel. Useful for console implementations, where you are not waiting for a specific package
 func (c *Conn) Read() (*Packet, error) {
-	if c.stream == nil {
+	if c.connected {
 		return nil, errors.New("connection not open")
 	}
 	return <-c.stream, nil
