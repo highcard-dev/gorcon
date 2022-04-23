@@ -167,7 +167,7 @@ func TestConn_Execute(t *testing.T) {
 		conn.Close()
 
 		result, err := conn.Execute("help")
-		wantErrMsg := fmt.Sprintf("write tcp %s->%s: use of closed network connection", conn.LocalAddr(), conn.RemoteAddr())
+		wantErrMsg := rcon.ErrConnectionNotOpen.Error()
 		if err == nil || err.Error() != wantErrMsg {
 			t.Errorf("got err %q, want to contain %q", err, wantErrMsg)
 		}
@@ -185,7 +185,7 @@ func TestConn_Execute(t *testing.T) {
 		conn.Close()
 
 		result, err := conn.Execute("help")
-		wantErrMsg := fmt.Sprintf("rcon: set tcp %s: use of closed network connection", conn.LocalAddr())
+		wantErrMsg := rcon.ErrConnectionNotOpen.Error()
 		if err == nil || err.Error() != wantErrMsg {
 			t.Errorf("got err %q, want to contain %q", err, wantErrMsg)
 		}

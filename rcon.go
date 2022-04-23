@@ -162,7 +162,7 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 func (c *Conn) Execute(command string) (string, error) {
 
 	if !c.connected {
-		return "", errors.New("connection not open")
+		return "", ErrConnectionNotOpen
 	}
 
 	randId := int32(rand.Int())
@@ -223,7 +223,7 @@ func (c *Conn) Close() error {
 // Get all rcon packet output as channel. Useful for console implementations, where you are not waiting for a specific package
 func (c *Conn) Read() (*Packet, error) {
 	if !c.connected {
-		return nil, errors.New("connection not open")
+		return nil, ErrConnectionNotOpen
 	}
 	return <-c.stream, nil
 }
