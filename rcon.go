@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"time"
@@ -137,6 +138,13 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 		for client.openExecutes != nil {
 			packet, err := client.read()
 			if err != nil {
+				if err == io.EOF {
+					if len(client.stream) >= 100 {
+						<-client.stream
+					}
+					client.stream <- nil
+					break
+				}
 				continue
 			}
 			if len(client.stream) >= 100 {
@@ -225,7 +233,12 @@ func (c *Conn) Read() (*Packet, error) {
 	if !c.connected {
 		return nil, ErrConnectionNotOpen
 	}
-	return <-c.stream, nil
+	pck := <-c.stream
+	if pck == nil {
+		c.Close()
+		return nil, io.EOF
+	}
+	return pck, nil
 }
 
 // auth sends SERVERDATA_AUTH request to the remote server and
@@ -237,7 +250,7 @@ func (c *Conn) auth(password string) error {
 
 	if c.settings.deadline != 0 {
 		if err := c.conn.SetReadDeadline(time.Now().Add(c.settings.deadline)); err != nil {
-			return fmt.Errorf("rcon: %w", err)
+			return err
 		}
 	}
 
@@ -263,7 +276,7 @@ func (c *Conn) auth(password string) error {
 	// We must to read response body.
 	buffer := make([]byte, response.Size-PacketHeaderSize)
 	if _, err := c.conn.Read(buffer); err != nil {
-		return fmt.Errorf("rcon: %w", err)
+		return err
 	}
 
 	if response.Type != SERVERDATA_AUTH_RESPONSE {
@@ -299,7 +312,7 @@ func (c *Conn) write(packetType int32, packetID int32, command string) error {
 func (c *Conn) read() (*Packet, error) {
 	if c.settings.deadline != 0 {
 		if err := c.conn.SetReadDeadline(time.Now().Add(c.settings.deadline)); err != nil {
-			return nil, fmt.Errorf("rcon: %w", err)
+			return nil, err
 		}
 	}
 
@@ -315,15 +328,15 @@ func (c *Conn) read() (*Packet, error) {
 func (c *Conn) readHeader() (Packet, error) {
 	var packet Packet
 	if err := binary.Read(c.conn, binary.LittleEndian, &packet.Size); err != nil {
-		return packet, fmt.Errorf("rcon: read packet size: %w", err)
+		return packet, err
 	}
 
 	if err := binary.Read(c.conn, binary.LittleEndian, &packet.ID); err != nil {
-		return packet, fmt.Errorf("rcon: read packet id: %w", err)
+		return packet, err
 	}
 
 	if err := binary.Read(c.conn, binary.LittleEndian, &packet.Type); err != nil {
-		return packet, fmt.Errorf("rcon: read packet type: %w", err)
+		return packet, err
 	}
 
 	return packet, nil

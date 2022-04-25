@@ -3,7 +3,6 @@ package rcon
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 )
 
@@ -92,7 +91,7 @@ func (packet *Packet) WriteTo(w io.Writer) (n int64, err error) {
 // ReadFrom implements io.ReaderFrom for read a packet from r.
 func (packet *Packet) ReadFrom(r io.Reader) (n int64, err error) {
 	if err := binary.Read(r, binary.LittleEndian, &packet.Size); err != nil {
-		return n, fmt.Errorf("rcon: read packet size: %w", err)
+		return n, err
 	}
 
 	n += 4
@@ -102,13 +101,13 @@ func (packet *Packet) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	if err := binary.Read(r, binary.LittleEndian, &packet.ID); err != nil {
-		return n, fmt.Errorf("rcon: read packet id: %w", err)
+		return n, err
 	}
 
 	n += 4
 
 	if err := binary.Read(r, binary.LittleEndian, &packet.Type); err != nil {
-		return n, fmt.Errorf("rcon: read packet type: %w", err)
+		return n, err
 	}
 
 	n += 4
@@ -122,7 +121,7 @@ func (packet *Packet) ReadFrom(r io.Reader) (n int64, err error) {
 		var m int
 
 		if m, err = r.Read(packet.body[i:]); err != nil {
-			return n + int64(m) + int64(i), fmt.Errorf("rcon: %w", err)
+			return n + int64(m) + int64(i), err
 		}
 
 		i += int32(m)
