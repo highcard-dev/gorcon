@@ -135,7 +135,7 @@ func Dial(address string, password string, options ...Option) (*Conn, error) {
 	client.connected = true
 	//main reading routine
 	go func() {
-		for client.openExecutes != nil {
+		for client.openExecutes != nil && (settings.readWithoutExecutes || len(client.openExecutes) > 0) {
 			packet, err := client.read()
 			if err != nil {
 				if err == io.EOF {

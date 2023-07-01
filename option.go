@@ -4,16 +4,18 @@ import "time"
 
 // Settings contains option to Conn.
 type Settings struct {
-	dialTimeout    time.Duration
-	deadline       time.Duration
-	executeTimeout time.Duration
+	dialTimeout         time.Duration
+	deadline            time.Duration
+	executeTimeout      time.Duration
+	readWithoutExecutes bool
 }
 
 // DefaultSettings provides default deadline settings to Conn.
 var DefaultSettings = Settings{
-	dialTimeout:    DefaultDialTimeout,
-	executeTimeout: DefaultExecuteTimeout,
-	deadline:       DefaultDeadline,
+	dialTimeout:         DefaultDialTimeout,
+	executeTimeout:      DefaultExecuteTimeout,
+	deadline:            DefaultDeadline,
+	readWithoutExecutes: false,
 }
 
 // Option allows to inject settings to Settings.
@@ -30,5 +32,11 @@ func SetDialTimeout(timeout time.Duration) Option {
 func SetDeadline(timeout time.Duration) Option {
 	return func(s *Settings) {
 		s.deadline = timeout
+	}
+}
+
+func SetReadWithoutExecutes(readWithoutExecutes bool) Option {
+	return func(s *Settings) {
+		s.readWithoutExecutes = readWithoutExecutes
 	}
 }
